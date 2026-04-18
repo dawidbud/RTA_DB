@@ -1,5 +1,5 @@
 services:
-  # KAFKA (bez Zookeepera - tryb KRaft)
+  # KAFKA (tryb KRaft - bez Zookeepera)
   broker:
     image: confluentinc/cp-kafka:7.8.0
     hostname: broker
@@ -23,13 +23,15 @@ services:
 
   # JUPYTER + SPARK
   jupyter:
-    build: .
+    image: jupyterlab-project-jupyter
     container_name: jupyter
+    user: root  # Daje Ci pełne uprawnienia administratora wewnątrz kontenera
     depends_on:
       - broker
       - redis
     environment:
       - JUPYTER_TOKEN=root
+      - GRANT_SUDO=yes
     volumes:
       - ./notebooks:/home/jovyan/notebooks
     ports:
