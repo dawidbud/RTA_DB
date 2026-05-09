@@ -1,5 +1,4 @@
 from kafka import KafkaConsumer, KafkaProducer
-from datetime import datetime
 import json
 import requests
 
@@ -23,19 +22,11 @@ for message in consumer:
     tx_id = tx.get('tx_id')
     amount = float(tx.get('amount', 0.0))
     is_electronics = int(tx.get('is_electronics', 0))
-    tx_per_day = int(tx.get('tx_per_day', 5))
-
-    if 'hour' in tx:
-        hour = int(tx['hour'])
-    else:
-        timestamp = tx.get('timestamp')
-        hour = datetime.fromisoformat(timestamp).hour if timestamp else 0
 
     payload = {
         'amount': amount,
-        'hour': hour,
         'is_electronics': is_electronics,
-        'tx_per_day': tx_per_day
+        'tx_per_minute': 5
     }
 
     response = requests.post(API_URL, json=payload)
@@ -47,7 +38,7 @@ for message in consumer:
             'amount': amount,
             'fraud_probability': result.get('fraud_probability'),
             'timestamp': tx.get('timestamp'),
-            'alert_time': datetime.utcnow().isoformat() + 'Z'
+            'alert_time': __import__('datetime').datetime.utcnow().isoformat() + 'Z'
         }
         alert_producer.send('alerts', value=alert)
         alert_producer.flush()

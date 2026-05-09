@@ -3,26 +3,27 @@ from pydantic import BaseModel
 import pickle
 import numpy as np
 
-app = FastAPI(title="Fraud Detection API")
-model = pickle.load(open('fraud_model.pkl', 'rb'))
+app = FastAPI(title="Fraud Detection API — Isolation Forest")
+model = pickle.load(open("fraud_model_if.pkl", "rb"))
 
 class Transaction(BaseModel):
     amount: float
-    hour: int
     is_electronics: int
-    tx_per_day: int
+    tx_per_minute: int
 
-class ScoringResult(BaseModel):
-    is_fraud: bool
-    fraud_probability: float
+@app.post("/score")
+def score(tx: Transaction):
+    X = np.array([[tx.amount, tx.is_electronics, tx.tx_per_minute]])
+    prediction = model.predict(X)[0]           # +1 normal, -1 anomaly
+    anomaly_score = model.decision_function(X)[0]
 
-@app.post('/score', response_model=ScoringResult)
-def score(transaction: Transaction):
-    features = np.array([[transaction.amount, transaction.hour,
-                          transaction.is_electronics, transaction.tx_per_day]])
-    prob = float(model.predict_proba(features)[0][1])
-    return {"is_fraud": prob >= 0.5, "fraud_probability": prob}
+    fraud_probability = float(np.clip(0.5 - anomaly_score, 0.0, 1.0))
+    return {
+        "is_fraud": bool(prediction == -1),
+        "fraud_probability": round(fraud_probability, 4),
+        "model": "isolation_forest",
+    }
 
-@app.get('/health')
+@app.get("/health")
 def health():
     return {"status": "ok"}
